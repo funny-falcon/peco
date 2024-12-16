@@ -21,9 +21,9 @@ null = seq(skip('null'), mknone)
 
 value = lambda s: value(s)
 
-array = group(seq(skip(r'\['), opt(list_of(value, skip(','))), skip(']')))
+array = group(seq(skip(r'\['), list_of(value, skip(',')), skip(']')))
 member = group(seq(scan(string), skip(':'), value))
-obj = seq(skip('{'), group(opt(list_of(member, skip(',')))), skip('}'), mkobj)
+obj = seq(skip('{'), group(list_of(member, skip(','))), skip('}'), mkobj)
 value = alt(scan(number), scan(string), true, false, null, obj, array)
 json = seq(alt(obj, array), ws)
 

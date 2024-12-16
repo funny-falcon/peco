@@ -36,6 +36,10 @@ def _split(stack, n):
     return tuple(acc), stack
 
 
+def empty(s):
+    return s
+
+
 def eat(expr):
     code = re.compile(expr)
 
@@ -66,10 +70,16 @@ def alt(*funcs):
     return parse
 
 
-def many(f):
+def list_of(f, d=empty, *, min=0):
     def parse(s):
-        while (new_s := f(s)).ok:
-            s = new_s
+        i, new_s = 0, f(s)
+        while new_s.ok or i < min:
+            if not (s := new_s).ok:
+                break
+            i += 1
+            if not (new_s := d(s)).ok:
+                break
+            new_s = f(new_s)
         return s
     return parse
 
@@ -142,7 +152,6 @@ def parse(text, f):
     return s._replace(ok=s.ok and s.pos == len(s.text))
 
 
-empty = lambda s: s
 opt = lambda f: alt(f, empty)
-some = lambda f: seq(f, many(f))
-list_of = lambda f, d: seq(f, many(seq(d, f)))
+many = lambda f: list_of(f)
+some = lambda f: list_of(f, min=1)
