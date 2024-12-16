@@ -29,14 +29,14 @@ cmd = lambda s: cmd(s)
 block = seq(group(many(cmd)), mkblock)
 
 cmd = alt(
-    seq(tok('fd|bk|lt|rt'), num, mkmove),
-    seq(tok('pu|pd'), mkpen),
-    seq(skip('repeat'), num, skip(r'\['), block, skip(r'\]'), mkrepeat),
+    seq(tok('fd|bk|lt|rt'), cut, num, mkmove),
+    seq(tok('pu|pd'), cut, mkpen),
+    seq(skip('repeat'), cut, num, skip(r'\['), block, skip(r'\]'), mkrepeat),
     seq(name, mkcall)
 )
 
-func = seq(skip('to'), name, block, skip('end'), mkfunc)
-main = seq(group(many(alt(cmd, func))), ws, mkblock)
+func = seq(skip('to'), cut, name, block, skip('end'), mkfunc)
+main = seq(group(many(alt(func, cmd))), ws, mkblock)
 
 
 def test():

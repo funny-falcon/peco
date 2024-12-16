@@ -3,7 +3,7 @@ import re
 from collections import namedtuple
 
 __all__ = 'Peco Stack eat seq alt many push to group peek npeek memo left ' \
-		  'parse empty opt some list_of'.split()
+		  'parse empty opt some list_of cut'.split()
 
 Peco = namedtuple('Peco', 'text pos ok stack glob')
 
@@ -60,14 +60,20 @@ def seq(*funcs):
         return s
     return parse
 
-
 def alt(*funcs):
     def parse(s):
+        oldcut, s.glob['cut'] = s.glob['cut'], False
         for f in funcs:
-            if (new_s := f(s)).ok:
-                return new_s
+            if (new_s := f(s)).ok or new_s.glob['cut']:
+                break
+        new_s.glob['cut'] = oldcut
         return new_s
     return parse
+
+
+def cut(s):
+    s.glob['cut'] = True
+    return s
 
 
 def list_of(f, d=empty, *, min=0):
@@ -148,7 +154,7 @@ def left(f):
 
 
 def parse(text, f):
-    s = f(Peco(text, 0, True, None, dict(err=0, tab={})))
+    s = f(Peco(text, 0, True, None, dict(err=0, tab={}, cut=None)))
     return s._replace(ok=s.ok and s.pos == len(s.text))
 
 

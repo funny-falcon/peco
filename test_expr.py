@@ -16,20 +16,20 @@ expr = lambda s: expr(s)
 term = lambda s: term(s)
 
 factor = alt(
-    seq(skip(r'\('), expr, skip(r'\)')),
+    seq(skip(r'\('), cut, expr, skip(r'\)')),
     var,
     num
 )
 
 expr = left(alt(
-    seq(expr, tok(r'\+'), term, mkbop),
-    seq(expr, tok(r'-'), term, mkbop),
+    seq(expr, tok(r'\+'), cut, term, mkbop),
+    seq(expr, tok(r'-'), cut, term, mkbop),
     term
 ))
 
 term = left(alt(
-    seq(term, tok(r'\*'), factor, mkbop),
-    seq(term, tok(r'/'), factor, mkbop),
+    seq(term, tok(r'\*'), cut, factor, mkbop),
+    seq(term, tok(r'/'), cut, factor, mkbop),
     factor
 ))
 
