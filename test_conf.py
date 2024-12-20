@@ -1,26 +1,19 @@
-from peco import *
+from peco2 import *
 
-mknum = to(lambda n: float(n))
-mkstr = to(lambda s: s[1:-1])
-mkarr = to(lambda a: list(a))
-mkobj = to(lambda o: dict(o))
+ws = rep(r'/\s+|#.+')
+tok = lambda *f: seq(ws, *f)
 
-ws = many(eat(r'\s+|#.+'))
-token = lambda f: memo(seq(ws, f))
-tok = lambda c: token(push(eat(c)))
-skip = lambda c: token(eat(c))
+num = tok(put(r'/[-+]?\d+', map=float))
+string = tok('"',put(r'/[^"]*'),'"')
+name = tok(put(r'/[_a-zA-Z][_a-zA-Z0-9]*'))
 
-num = seq(tok(r'[-+]?\d+'), mknum)
-string = seq(tok(r'"[^"]*"'), mkstr)
-name = tok(r'[_a-zA-Z][_a-zA-Z0-9]*')
-
-val = lambda s: val(s)
-array = seq(skip(r'\['), cut, group(many(val)), skip(r'\]'), mkarr)
-item = group(seq(name, skip(r'='), val))
-obj = seq(skip(r'{'), cut, group(many(item)), skip(r'}'), mkobj)
+val = lambda p, s: val(p, s)
+array = seq(tok('['), cut, grp(rep(val), map=list), tok(']'))
+item = grp(name, tok('='), val)
+obj = seq(tok('{'), cut, grp(rep(item),map=dict), tok('}'))
 val = alt(num, string, array, obj)
 
-main = seq(group(many(item)), ws, mkobj)
+main = seq(grp(rep(item), map=dict), ws, eof)
 
 
 def test():
@@ -37,8 +30,8 @@ def test():
     }
     log = "conf.log"
     '''
-    obj = ({'vm': {'ip': [192.0, 168.0, 44.0, 44.0], 'memory': 1024.0,
+    obj = {'vm': {'ip': [192.0, 168.0, 44.0, 44.0], 'memory': 1024.0,
            'synced_folders': [{'host_path': 'data/', 'guest_path': '/var/www',
-           'type': 'default'}]}, 'log': 'conf.log'}, None)
-    s = parse(src, main)
-    assert s.ok and s.stack == obj
+           'type': 'default'}]}, 'log': 'conf.log'}
+    _, s = Peco(src).parse(main)
+    assert s and s.stk.v == obj

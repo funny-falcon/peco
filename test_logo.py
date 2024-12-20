@@ -1,39 +1,29 @@
-from peco import *
+from peco2 import *
 
 
-def get_loc(text, pos):
-    line = text.count('\n', 0, pos)
-    col = pos - text.rfind('\n', 0, pos) - 1
-    return line, col
+mkrepeat = lambda a: ('repeat', *a)
+mkcall = lambda n: ('call', n)
+mkfunc = lambda n, b: ('func', n, b)
+mkblock = lambda b: ('block', b)
 
+ws = lit(r'/\s*|#.*')
+tok = lambda *f: seq(*f, ws)
 
-mkmove = to(lambda m, x: (m, x))
-mkpen = to(lambda m: (m,))
-mkrepeat = to(lambda x, b: ('repeat', x, b))
-mkcall = to(lambda n: ('call', n))
-mkfunc = to(lambda n, b: ('func', n, b))
-mkblock = to(lambda b: ('block', b))
+name = tok(put(r'/[a-zA-Z_][a-zA-Z0-9_]*'))
+num = tok(put(r'/-?[0-9]+', map=float))
 
-ws = eat(r'\s*|#.*')
-token = lambda f: memo(seq(ws, f))
-tok = lambda c: token(push(eat(c)))
-skip = lambda c: token(eat(c))
-
-name = tok(r'[a-zA-Z_][a-zA-Z0-9_]*')
-num = seq(tok(r'-?[0-9]+'), to(lambda x: float(x)))
-
-cmd = lambda s: cmd(s)
-block = lambda end: seq(group(many(seq(npeek(end), cmd))), end, mkblock)
+cmd = lambda p, s: cmd(p, s)
+block = lambda end: grp(rep(seq(wont(end), cmd)), end, map=mkblock)
 
 cmd = alt(
-    seq(tok('fd|bk|lt|rt'), cut, num, mkmove),
-    seq(tok('pu|pd'), cut, mkpen),
-    seq(skip('repeat'), cut, num, skip(r'\['), block(skip(r'\]')), mkrepeat),
-    seq(name, mkcall)
+    grp(tok(put('/fd|bk|lt|rt')), cut, num, map=tuple),
+    tok(put('/pu|pd', map=lambda m: (m,))),
+    grp(tok('repeat'), cut, num, tok(r'['), block(tok(r']')), map=mkrepeat),
+    seq(name, map1(mkcall))
 )
 
-func = seq(skip('to'), cut, name, block(skip('end')), mkfunc)
-main = seq(group(many(alt(func, cmd))), ws, mkblock)
+func = seq(tok('to'), cut, name, block(tok('end')), map2(mkfunc))
+main = seq(ws, grp(rep(alt(func, cmd)), map=mkblock))
 
 
 def test():
@@ -43,8 +33,8 @@ def test():
     end
     star
     '''
-    s = parse(src, main)
-    result = (('block',
+    p, s = Peco(src).parse(main)
+    result = ('block',
                (('func',
                  'star',
                  ('block',
@@ -53,8 +43,8 @@ def test():
                     ('block',
                      (('fd', 100.0),
                       ('rt', 144.0)))),))),
-                ('call', 'star'))), None)
-    assert s.ok and s.stack == result
+                ('call', 'star')))
+    assert s and s.stk.v == result
     err = '''
     to center_top
       pu
@@ -65,5 +55,5 @@ def test():
       pd
     end
     '''
-    s = parse(err, main)
-    assert not s.ok and get_loc(s.text, s.glob['err']) == (4, 9)
+    p, s = Peco(err).parse(seq(main, eof))
+    assert not s and p.loc(p.maxpos) == (4, 9)

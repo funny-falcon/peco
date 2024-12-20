@@ -1,28 +1,25 @@
-from peco import *
+from peco2 import *
 
-ws = eat(r'\s*')
-token = lambda f: memo(seq(ws, f))
-tok = lambda c: token(push(eat(c)))
-skip = lambda c: token(eat(c))
+ws = lit(r'/\s*')
+tok = lambda *f: seq(*f, ws)
 
-mkfun = to(lambda arg, body: ('fun', arg, body))
-mkapp = to(lambda func, arg: ('app', func, arg))
+mkfun = map2(lambda args, body: ('fun', args, body))
+mkapp = mapN(lambda func, args: ('app', func, args))
 
-expr = lambda s: expr(s)
-atom = tok(r'[a-zA-Z]')
-func = seq(skip('λ'), cut, atom, skip('.'), expr, mkfun)
-appl = seq(expr, cut, expr, mkapp)
-
-pars = seq(skip(r'\('), cut, expr, skip(r'\)'))
-expr = left(alt(func, pars, appl, atom))
+expr = lambda p, s: expr(p, s)
+atom = tok(put(r'/[a-zA-Z]'))
+func = seq(tok('λ'), cut, atom, tok('.'), expr, mkfun)
+pars = seq(tok('('), cut, expr, tok(')'))
+one = alt(func, pars, atom)
+expr = seq(one, opt(seq(expr, mkapp)))
 
 
 def test():
     x = ' λb. λg. (λa.b g(a))  '
-    y = (('fun', 'b',
+    y = ('fun', 'b',
           ('fun', 'g',
            ('fun', 'a',
             ('app', 'b',
-             ('app', 'g', 'a'))))), None)
-    s = parse(x, seq(expr, ws))
-    assert s.ok and s.stack == y
+             ('app', 'g', 'a')))))
+    p, s = Peco(x).parse(seq(ws, expr))
+    assert s and s.stk.v == y
